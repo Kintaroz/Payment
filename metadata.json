@@ -1,0 +1,5 @@
+{
+  "name": "Payment & Document Assistant",
+  "description": "ช่วยทำจ่ายและกรอกเอกสารอัตโนมัติ พร้อมส่งออกเป็นไฟล์ Excel ตามรูปแบบที่กำหนด",
+  "requestFramePermissions": []
+}
