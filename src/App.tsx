@@ -38,6 +38,13 @@ interface ProcessedData {
   validRows: any[];
 }
 
+const getSupplier = (row: any) => row['Supplier d'] || row['供应商中文描述'];
+const getPO = (row: any) => row['Purchase o'] || row['采购订单'];
+const getTotalAmount = (row: any) => row['Total amou'] || row['总金额'];
+const getReceipt = (row: any) => row['Receipt nu'] || row['发票号'];
+const getNetTotal = (row: any) => row['Net total'] || row['未稅'] || row['未税'];
+const getTax = (row: any) => row['Tax'] || row['稅金'] || row['税金'] || row['税额'];
+
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [data, setData] = useState<RowData[]>([]);
@@ -79,14 +86,14 @@ export default function App() {
 
         setData(jsonData);
         
-        // Extract valid rows that have Supplier d
-        const validRows = jsonData.filter(row => row['Supplier d']);
+        // Extract valid rows that have Supplier d or 供应商中文描述
+        const validRows = jsonData.filter(row => getSupplier(row));
         
         if (validRows.length === 0) {
-          throw new Error("ไม่พบข้อมูลในคอลัมน์ 'Supplier d'");
+          throw new Error("ไม่พบข้อมูลในคอลัมน์ 'Supplier d' หรือ '供应商中文描述'");
         }
 
-        const supplier = validRows[0]['Supplier d'];
+        const supplier = getSupplier(validRows[0]);
         const parseAmount = (val: any) => parseFloat(String(val || '0').replace(/,/g, ''));
 
         // Group by PO
@@ -94,11 +101,11 @@ export default function App() {
         let calculatedTotal = 0;
 
         validRows.forEach(row => {
-          const po = row['Purchase o'] || 'ไม่ระบุ PO';
-          const amt = parseAmount(row['Total amou']);
-          const net = parseAmount(row['Net total']);
-          const tax = parseAmount(row['Tax']);
-          const receipt = row['Receipt nu'] || '';
+          const po = getPO(row) || 'ไม่ระบุ PO';
+          const amt = parseAmount(getTotalAmount(row));
+          const net = parseAmount(getNetTotal(row));
+          const tax = parseAmount(getTax(row));
+          const receipt = getReceipt(row) || '';
           
           if (!poMap.has(po)) {
             poMap.set(po, { poNumber: po, amount: 0, netTotal: 0, vat: 0, receiptNo: receipt, rows: [] });
@@ -114,8 +121,8 @@ export default function App() {
         });
 
         // Find total amount (Look for summary row first, else sum valid rows)
-        const summaryRow = jsonData.find(row => !row['Supplier d'] && row['Total amou']);
-        const totalAmount = summaryRow ? parseAmount(summaryRow['Total amou']) : calculatedTotal;
+        const summaryRow = jsonData.find(row => !getSupplier(row) && getTotalAmount(row));
+        const totalAmount = summaryRow ? parseAmount(getTotalAmount(summaryRow)) : calculatedTotal;
 
         const d = new Date();
         const yyyy = d.getFullYear();
@@ -181,7 +188,7 @@ export default function App() {
 
   const copyReceiptData = (validRows: any[], poGroups: POGroup[]) => {
     const text = validRows.map(row => {
-      const poNum = row['Purchase o'] || 'ไม่ระบุ PO';
+      const poNum = getPO(row) || 'ไม่ระบุ PO';
       const poGroup = poGroups.find(g => g.poNumber === poNum);
       return poGroup?.receiptNo || '';
     }).join('\n');
